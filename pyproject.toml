@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qipai-news-bot"
+version = "0.1.0"
+description = "DingTalk public-opinion monitor for China's board and card game industry"
+requires-python = ">=3.11"
+dependencies = [
+  "feedparser>=6.0.11,<7",
+  "PyYAML>=6.0.2,<7",
+  "requests>=2.32.3,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9"]
+
+[project.scripts]
+qipai-news-bot = "newsbot.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+

@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+import re
+from difflib import SequenceMatcher
+from html.parser import HTMLParser
+
+import requests
+
+from .models import Assessment, NewsItem
+
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136 Safari/537.36"
+HAN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+
+
+class _ArticleTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.parts: list[str] = []
+        self.skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style", "noscript", "svg"}:
+            self.skip_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style", "noscript", "svg"} and self.skip_depth:
+            self.skip_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        text = " ".join(data.split())
+        if not self.skip_depth and len(HAN_RE.findall(text)) >= 8:
+            self.parts.append(text)
+
+
+def _normalized(value: str) -> str:
+    return re.sub(r"[^0-9a-z\u4e00-\u9fff]", "", value.lower())
+
+
+def enrich_summary_from_original(
+    item: NewsItem,
+    assessment: Assessment,
+    timeout_seconds: float,
+) -> None:
+    if item.summary.strip():
+        return
+    try:
+        session = requests.Session()
+        session.trust_env = False
+        response = session.get(item.url, timeout=timeout_seconds, headers={"User-Agent": USER_AGENT})
+        response.raise_for_status()
+        parser = _ArticleTextParser()
+        parser.feed(response.text)
+    except Exception:
+        return
+
+    title_key = _normalized(item.title)
+    terms = [term for term in assessment.matched_terms if len(term) >= 2]
+    candidates: list[tuple[int, int, str]] = []
+    seen_sentences: set[str] = set()
+    for index, part in enumerate(parser.parts):
+        for sentence in re.split(r"(?<=[。！？；])", part):
+            sentence = sentence.strip()
+            if len(sentence) < 18 or len(sentence) > 260:
+                continue
+            sentence = sentence.replace("“", "").replace("”", "").replace('"', "")
+            sentence_key = _normalized(sentence)
+            if not sentence_key or SequenceMatcher(None, title_key, sentence_key).ratio() >= 0.88:
+                continue
+            if sentence_key in seen_sentences:
+                continue
+            seen_sentences.add(sentence_key)
+            term_hits = sum(term.lower() in sentence.lower() for term in terms)
+            factual_hits = sum(
+                term in sentence
+                for term in ("公告", "宣布", "计划", "正式通知", "调整", "上调", "下调", "价格", "定价")
+            )
+            if not term_hits and not factual_hits:
+                continue
+            score = term_hits * 4 + factual_hits * 3
+            score += 4 if re.search(r"\d", sentence) else 0
+            score += 8 if any(term in sentence for term in ("公告称", "宣布", "正式通知")) else 0
+            score -= 15 if any(term in sentence for term in ("分析人士认为", "有观点认为", "机构认为", "业内认为")) else 0
+            candidates.append((score, index, sentence))
+
+    selected = sorted(candidates, key=lambda row: (-row[0], row[1]))[:2]
+    if selected and len(selected[0][2]) >= 45:
+        selected = selected[:1]
+    if selected:
+        item.summary = "".join(sentence for _, _, sentence in sorted(selected, key=lambda row: row[1]))
