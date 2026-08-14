@@ -36,12 +36,25 @@ def _normalized(value: str) -> str:
     return re.sub(r"[^0-9a-z\u4e00-\u9fff]", "", value.lower())
 
 
+def _summary_is_usable(item: NewsItem, assessment: Assessment) -> bool:
+    summary = " ".join(item.summary.split())
+    if len(HAN_RE.findall(summary)) < 28:
+        return False
+    if SequenceMatcher(None, _normalized(item.title), _normalized(summary)).ratio() >= 0.82:
+        return False
+    terms = [term for term in assessment.matched_terms if len(term) >= 2]
+    factual_markers = ("公告", "宣布", "发布", "调整", "上线", "收购", "融资", "用户", "收入", "价格")
+    return any(term.lower() in summary.lower() for term in terms) or any(
+        marker in summary for marker in factual_markers
+    )
+
+
 def enrich_summary_from_original(
     item: NewsItem,
     assessment: Assessment,
     timeout_seconds: float,
 ) -> None:
-    if item.summary.strip():
+    if _summary_is_usable(item, assessment):
         return
     try:
         session = requests.Session()
@@ -80,6 +93,7 @@ def enrich_summary_from_original(
             score += 4 if re.search(r"\d", sentence) else 0
             score += 8 if any(term in sentence for term in ("公告称", "宣布", "正式通知")) else 0
             score -= 15 if any(term in sentence for term in ("分析人士认为", "有观点认为", "机构认为", "业内认为")) else 0
+            score -= 15 if any(term in sentence for term in ("添一把猛火", "坐不住了", "猛攻", "游戏规则", "谁不爱", "疯狂")) else 0
             candidates.append((score, index, sentence))
 
     selected = sorted(candidates, key=lambda row: (-row[0], row[1]))[:2]

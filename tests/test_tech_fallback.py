@@ -99,6 +99,16 @@ def test_rejects_digest_and_unrated_source() -> None:
     assert assess_tech_fallback(item) is None
 
 
+def test_rejects_question_style_explainer_as_breaking_news() -> None:
+    item = make_item(
+        "从DeepSeek、Kimi到黄仁勋联盟：AI模型开源，到底开了什么？",
+        "开放权重正在改变AI游戏规则。",
+        "钛媒体",
+    )
+    item.url = "https://www.tmtpost.com/example"
+    assert assess_tech_fallback(item) is None
+
+
 def test_minor_tech_news_only_enters_daily_backup_pool() -> None:
     item = make_item("百度更新AI开发工具", "百度面向开发者更新模型服务文档。")
     assert assess_tech_fallback(item) is None

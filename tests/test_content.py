@@ -41,3 +41,19 @@ def test_enriches_missing_summary_from_article_facts(monkeypatch) -> None:
     assert "也扛不住了" not in item.summary
     assert item.summary.count("计划近期整体上调API服务定价") == 1
     assert "分析人士认为" not in item.summary
+
+
+def test_replaces_short_promotional_summary_with_article_fact(monkeypatch) -> None:
+    monkeypatch.setattr("newsbot.content.requests.Session", FakeSession)
+    item = NewsItem(
+        title="DeepSeek API服务调整",
+        url="https://example.com/article",
+        summary="开放权重正在改变AI游戏规则。",
+        source_name="钛媒体",
+        feed_name="测试",
+        published_at=datetime.now(timezone.utc),
+    )
+    assessment = Assessment(True, 80, "A", "平台与业务", 2, "二级信源", ["DeepSeek", "调价"], [], [])
+    enrich_summary_from_original(item, assessment, 5)
+    assert "计划近期整体上调API服务定价" in item.summary
+    assert "游戏规则" not in item.summary
