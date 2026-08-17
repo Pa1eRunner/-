@@ -240,5 +240,16 @@ class Storage:
         )
         self.connection.commit()
 
+    def update_content_metadata(self, item: NewsItem) -> None:
+        self.connection.execute(
+            """
+            UPDATE news_items
+            SET summary=?, published_at=?
+            WHERE fingerprint=?
+            """,
+            (item.summary, item.published_at.isoformat(), fingerprint(item)),
+        )
+        self.connection.commit()
+
     def close(self) -> None:
         self.connection.close()

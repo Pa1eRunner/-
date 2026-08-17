@@ -31,6 +31,7 @@ from .tech_fallback import (
     format_tech_fallback,
     tech_fallback_signature,
 )
+from .timeliness import evaluate_timeliness
 
 LOGGER = logging.getLogger(__name__)
 
@@ -224,25 +225,40 @@ class NewsBot:
                     )
                 else:
                     enrich_summary_from_original(item, assessment, self.config.bot.request_timeout_seconds)
-                    title, markdown = format_markdown(
+                    self.storage.update_content_metadata(item)
+                    timeliness = evaluate_timeliness(
                         item,
                         assessment,
-                        self.config.bot.security_keyword,
-                        self.config.company_profiles,
+                        self.config.monitor.maximum_item_age_hours,
+                        self.config.monitor.maximum_core_event_age_hours,
                     )
-                    issues = quality_issues(markdown)
-                    if issues:
-                        LOGGER.warning("Quality gate blocked issues=%s source=%s", "; ".join(issues), item.source_name)
+                    if not timeliness.allowed:
+                        LOGGER.warning(
+                            "Timeliness gate blocked reason=%s source=%s title=%s",
+                            timeliness.reason,
+                            item.source_name,
+                            item.title,
+                        )
                     else:
-                        if self.dry_run:
-                            print(f"\n{'=' * 72}\n{markdown}")
+                        title, markdown = format_markdown(
+                            item,
+                            assessment,
+                            self.config.bot.security_keyword,
+                            self.config.company_profiles,
+                        )
+                        issues = quality_issues(markdown)
+                        if issues:
+                            LOGGER.warning("Quality gate blocked issues=%s source=%s", "; ".join(issues), item.source_name)
                         else:
-                            assert self.client is not None
-                            self.client.send_markdown(title, markdown)
-                        sent = True
-                        sent_count += 1
-                        action = "prepared" if self.dry_run else "sent"
-                        LOGGER.info("Alert %s level=%s score=%s title=%s", action, assessment.level, assessment.score, item.title)
+                            if self.dry_run:
+                                print(f"\n{'=' * 72}\n{markdown}")
+                            else:
+                                assert self.client is not None
+                                self.client.send_markdown(title, markdown)
+                            sent = True
+                            sent_count += 1
+                            action = "prepared" if self.dry_run else "sent"
+                            LOGGER.info("Alert %s level=%s score=%s title=%s", action, assessment.level, assessment.score, item.title)
             self.storage.save(
                 item,
                 assessment,
@@ -273,29 +289,44 @@ class NewsBot:
                     LOGGER.warning("Fallback language blocked reason=%s source=%s", language_result.reason, item.source_name)
                 else:
                     enrich_summary_from_original(item, assessment, self.config.bot.request_timeout_seconds)
-                    formatter = format_game_fallback if fallback_kind == "game" else format_tech_fallback
-                    title, markdown = formatter(item, assessment, self.config.bot.security_keyword)
-                    issues = quality_issues(markdown)
-                    if issues:
-                        LOGGER.warning("Fallback quality blocked issues=%s source=%s", "; ".join(issues), item.source_name)
-                    else:
-                        if self.dry_run:
-                            print(f"\n{'=' * 72}\n{markdown}")
-                        else:
-                            assert self.client is not None
-                            self.client.send_markdown(title, markdown)
-                        sent = True
-                        sent_count += 1
-                        fallback_sent[fallback_kind] += 1
-                        action = "prepared" if self.dry_run else "sent"
-                        LOGGER.info(
-                            "%s fallback %s level=%s score=%s title=%s",
-                            fallback_kind.capitalize(),
-                            action,
-                            assessment.level,
-                            assessment.score,
+                    self.storage.update_content_metadata(item)
+                    timeliness = evaluate_timeliness(
+                        item,
+                        assessment,
+                        self.config.monitor.maximum_item_age_hours,
+                        self.config.monitor.maximum_core_event_age_hours,
+                    )
+                    if not timeliness.allowed:
+                        LOGGER.warning(
+                            "Fallback timeliness blocked reason=%s source=%s title=%s",
+                            timeliness.reason,
+                            item.source_name,
                             item.title,
                         )
+                    else:
+                        formatter = format_game_fallback if fallback_kind == "game" else format_tech_fallback
+                        title, markdown = formatter(item, assessment, self.config.bot.security_keyword)
+                        issues = quality_issues(markdown)
+                        if issues:
+                            LOGGER.warning("Fallback quality blocked issues=%s source=%s", "; ".join(issues), item.source_name)
+                        else:
+                            if self.dry_run:
+                                print(f"\n{'=' * 72}\n{markdown}")
+                            else:
+                                assert self.client is not None
+                                self.client.send_markdown(title, markdown)
+                            sent = True
+                            sent_count += 1
+                            fallback_sent[fallback_kind] += 1
+                            action = "prepared" if self.dry_run else "sent"
+                            LOGGER.info(
+                                "%s fallback %s level=%s score=%s title=%s",
+                                fallback_kind.capitalize(),
+                                action,
+                                assessment.level,
+                                assessment.score,
+                                item.title,
+                            )
             self.storage.save(
                 item,
                 assessment,
@@ -397,6 +428,22 @@ class NewsBot:
             if not language_result.allowed:
                 continue
             enrich_summary_from_original(item, assessment, self.config.bot.request_timeout_seconds)
+            self.storage.update_content_metadata(item)
+            timeliness = evaluate_timeliness(
+                item,
+                assessment,
+                self.config.monitor.maximum_item_age_hours,
+                self.config.monitor.maximum_core_event_age_hours,
+                now.astimezone(timezone.utc),
+            )
+            if not timeliness.allowed:
+                LOGGER.warning(
+                    "Daily backup timeliness blocked reason=%s source=%s title=%s",
+                    timeliness.reason,
+                    item.source_name,
+                    item.title,
+                )
+                continue
             if candidate_kind == "qipai":
                 title, markdown = format_markdown(
                     item,

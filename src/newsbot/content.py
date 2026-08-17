@@ -1,24 +1,37 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from html.parser import HTMLParser
+from urllib.parse import urlparse
 
 import requests
 
 from .models import Assessment, NewsItem
+from .timeliness import infer_core_event_at
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136 Safari/537.36"
 HAN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+CHINA_TZ = timezone(timedelta(hours=8))
+PUBLISHED_META_NAMES = {
+    "article:published_time", "datepublished", "publishdate", "pubdate", "publication_date",
+}
 
 
 class _ArticleTextParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.parts: list[str] = []
+        self.published_values: list[str] = []
         self.skip_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = {key.lower(): value or "" for key, value in attrs}
+        if tag == "meta":
+            name = (attributes.get("property") or attributes.get("name") or "").lower()
+            if name in PUBLISHED_META_NAMES and attributes.get("content"):
+                self.published_values.append(attributes["content"])
         if tag in {"script", "style", "noscript", "svg"}:
             self.skip_depth += 1
 
@@ -49,13 +62,55 @@ def _summary_is_usable(item: NewsItem, assessment: Assessment) -> bool:
     )
 
 
+def _parse_datetime(value: str) -> datetime | None:
+    normalized = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        match = re.search(
+            r"(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})(?:日|[T\s]+)?\s*(\d{1,2})?:?(\d{1,2})?",
+            normalized,
+        )
+        if not match:
+            return None
+        parsed = datetime(
+            int(match.group(1)),
+            int(match.group(2)),
+            int(match.group(3)),
+            int(match.group(4) or 0),
+            int(match.group(5) or 0),
+        )
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=CHINA_TZ)
+    return parsed.astimezone(timezone.utc)
+
+
+def _original_published_at(page: str, url: str, parser: _ArticleTextParser) -> datetime | None:
+    values = list(parser.published_values)
+    values.extend(re.findall(r'"datePublished"\s*:\s*"([^"]+)"', page, re.IGNORECASE))
+    for value in values:
+        parsed = _parse_datetime(value)
+        if parsed:
+            return parsed
+
+    path = urlparse(url).path
+    match = re.search(r"/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})(?:/|$)", path)
+    if match:
+        return datetime(
+            int(match.group(1)),
+            int(match.group(2)),
+            int(match.group(3)),
+            tzinfo=CHINA_TZ,
+        ).astimezone(timezone.utc)
+    return None
+
+
 def enrich_summary_from_original(
     item: NewsItem,
     assessment: Assessment,
     timeout_seconds: float,
 ) -> None:
-    if _summary_is_usable(item, assessment):
-        return
+    summary_is_usable = _summary_is_usable(item, assessment)
     try:
         session = requests.Session()
         session.trust_env = False
@@ -64,6 +119,13 @@ def enrich_summary_from_original(
         parser = _ArticleTextParser()
         parser.feed(response.text)
     except Exception:
+        return
+
+    published_at = _original_published_at(response.text, getattr(response, "url", item.url), parser)
+    if published_at:
+        item.published_at = published_at
+    item.core_event_at = infer_core_event_at(" ".join(parser.parts), item, assessment)
+    if summary_is_usable:
         return
 
     title_key = _normalized(item.title)

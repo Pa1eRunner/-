@@ -7,6 +7,7 @@ bot:
 monitor:
   poll_interval_seconds: 1800
   maximum_item_age_hours: 72
+  maximum_core_event_age_hours: 72
   instant_push_score: 30
   maximum_alerts_per_cycle: 5
   send_on_first_run: false

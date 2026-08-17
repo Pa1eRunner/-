@@ -13,6 +13,7 @@ class NewsItem:
     feed_name: str
     published_at: datetime
     discovered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    core_event_at: datetime | None = None
 
 
 @dataclass(slots=True)

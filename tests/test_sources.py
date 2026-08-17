@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from newsbot.sources import (
+    _entry_time,
     _SoNewsParser,
     _SogouWeixinParser,
     _extract_toutiao_objects,
@@ -24,6 +25,11 @@ def test_toutiao_direct_url_extracts_original_page() -> None:
 
 def test_toutiao_time_parses_epoch() -> None:
     assert _toutiao_time({"publish_time": "1700000000"}) == datetime.fromtimestamp(1700000000, tz=timezone.utc)
+
+
+def test_entry_time_uses_date_embedded_in_url() -> None:
+    parsed = _entry_time({}, "http://www.news.cn/fortune/2022-12/05/c_1129185619.htm")
+    assert parsed == datetime(2022, 12, 4, 16, tzinfo=timezone.utc)
 
 
 def test_parse_360_news_result() -> None:

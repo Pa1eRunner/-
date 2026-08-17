@@ -6,7 +6,7 @@ import html
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -27,10 +27,25 @@ def clean_text(value: str) -> str:
     return " ".join(html.unescape(value).split())
 
 
-def _entry_time(entry: feedparser.FeedParserDict) -> datetime:
+CHINA_TZ = timezone(timedelta(hours=8))
+
+
+def _date_from_url(url: str) -> datetime | None:
+    match = re.search(r"/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})(?:/|$)", urlparse(url).path)
+    if not match:
+        return None
+    return datetime(
+        int(match.group(1)), int(match.group(2)), int(match.group(3)), tzinfo=CHINA_TZ
+    ).astimezone(timezone.utc)
+
+
+def _entry_time(entry: feedparser.FeedParserDict, url: str = "") -> datetime:
     parsed = entry.get("published_parsed") or entry.get("updated_parsed")
     if parsed:
         return datetime.fromtimestamp(calendar.timegm(parsed), tz=timezone.utc)
+    url_date = _date_from_url(url)
+    if url_date:
+        return url_date
     return datetime.now(timezone.utc)
 
 
@@ -63,7 +78,7 @@ def fetch_feed(feed: FeedConfig, timeout_seconds: float) -> list[NewsItem]:
                 summary=clean_text(entry.get("summary", entry.get("description", ""))),
                 source_name=source_name,
                 feed_name=feed.name,
-                published_at=_entry_time(entry),
+                published_at=_entry_time(entry, url),
             )
         )
     return items

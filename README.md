@@ -86,6 +86,7 @@ powershell -ExecutionPolicy Bypass -File scripts/uninstall_windows_task.ps1
 - `daily_backup`：前一自然日零推送时，在次日 09:30 后从近 72 小时安全、可信、中文的备选内容中按分数固定发送 3 条；不足时每轮继续补选，直至当日补满。
 - `instant_push_score`：即时推送阈值，默认 70 分。
 - `maximum_item_age_hours`：拒绝旧闻的时间窗口，默认 72 小时。
+- `maximum_core_event_age_hours`：核心信息披露或发生时间的时效窗口，默认 72 小时；即使文章刚发布，复述旧事件也不推送。
 - `maximum_alerts_per_cycle`：单轮发送上限，避免突发刷屏。
 - `send_on_first_run`：是否在首次启动推送历史窗口内新闻，默认关闭。
 

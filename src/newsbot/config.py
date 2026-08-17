@@ -23,6 +23,7 @@ class BotConfig:
 class MonitorConfig:
     poll_interval_seconds: int
     maximum_item_age_hours: int
+    maximum_core_event_age_hours: int
     instant_push_score: int
     maximum_alerts_per_cycle: int
     send_on_first_run: bool
@@ -150,6 +151,7 @@ def load_config(path: str | Path) -> AppConfig:
         monitor=MonitorConfig(
             poll_interval_seconds=int(monitor.get("poll_interval_seconds", 600)),
             maximum_item_age_hours=int(monitor.get("maximum_item_age_hours", 72)),
+            maximum_core_event_age_hours=int(monitor.get("maximum_core_event_age_hours", 72)),
             instant_push_score=int(monitor.get("instant_push_score", 72)),
             maximum_alerts_per_cycle=int(monitor.get("maximum_alerts_per_cycle", 5)),
             send_on_first_run=bool(monitor.get("send_on_first_run", False)),
