@@ -74,6 +74,27 @@ def test_accepts_trusted_mobile_game_export_report() -> None:
     assert assessment.score >= 70
 
 
+def test_prioritizes_hit_minigame_buying_and_monetization_news() -> None:
+    item = make_item(
+        "爆款微信小游戏登顶畅销榜，买量与混合变现同步放量",
+        "该小游戏月流水破亿，投放素材、IAA广告变现和IAP内购共同驱动增长。",
+        "游戏陀螺",
+    )
+    assessment = assess_game_fallback(item)
+    assert assessment is not None
+    assert assessment.matched_terms[0] == "小游戏赛道"
+    assert assessment.category == "商业化运营"
+    assert assessment.score >= 70
+    title, markdown = format_game_fallback(item, assessment, "信源")
+    assert title.startswith("爆款微信小游戏")
+    assert "小游戏赛道爆款" not in markdown
+
+
+def test_rejects_minigame_content_without_business_event() -> None:
+    item = make_item("微信小游戏新手攻略", "介绍小游戏基础操作和普通关卡技巧。", "游戏陀螺")
+    assert assess_game_fallback(item) is None
+
+
 def test_fallback_message_passes_quality_gate() -> None:
     item = make_item(
         "网易游戏宣布一款网络游戏停止运营",

@@ -223,6 +223,19 @@ def test_event_keywords_include_tournament_cooperation_and_joint_operation() -> 
     assert "联运" in joint_operation.matched_terms
 
 
+def test_qipai_minigame_commercialization_has_high_priority() -> None:
+    item = make_item(
+        "棋牌买量小游戏投放增长",
+        "一款麻将爆款小游戏采用IAA与IAP混合变现，日活和投放ROI同步提升。",
+        "https://www.youxituoluo.com/example",
+    )
+    result = assess(item, [])
+    assert result.relevant
+    assert result.category == "平台与渠道"
+    assert result.score >= 70
+    assert "买量小游戏" in result.matched_terms
+
+
 def test_chinese_tvb_mahjong_event_clears_current_threshold() -> None:
     item = NewsItem(
         title="TVB麻将健脑大赛进入8月赛程",

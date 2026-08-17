@@ -152,6 +152,15 @@ searches:
   - name: 搜狗微信-地方棋牌
     provider: sogou_weixin
     query: 地方棋牌 麻将 斗地主
+  - name: 搜狗微信-小游戏商业化
+    provider: sogou_weixin
+    query: 爆款小游戏 买量小游戏 变现小游戏
+  - name: 360资讯-小游戏商业化
+    provider: so360
+    query: 微信小游戏 爆款 买量 投放 变现 流水
+  - name: 头条-小游戏商业化
+    provider: toutiao
+    query: 小游戏 爆款 买量 投放 变现 IAA
   - name: 360资讯-棋牌监管
     provider: so360
     query: 棋牌游戏 监管

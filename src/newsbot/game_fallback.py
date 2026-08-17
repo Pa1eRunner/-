@@ -9,6 +9,9 @@ from .quality import is_low_information_sentence, neutralize_headline
 from .scoring import SPAM_TERMS, classify_source
 
 GAME_ENTITIES = {
+    "小游戏赛道": (
+        "爆款小游戏", "买量小游戏", "变现小游戏", "微信小游戏", "抖音小游戏", "小游戏",
+    ),
     "腾讯游戏": ("腾讯游戏", "腾讯", "王者荣耀", "和平精英", "英雄联盟手游", "金铲铲之战", "地下城与勇士手游"),
     "网易游戏": ("网易游戏", "网易", "梦幻西游", "逆水寒", "第五人格", "永劫无间", "燕云十六声"),
     "米哈游": ("米哈游", "原神", "崩坏：星穹铁道", "崩坏星穹铁道", "绝区零"),
@@ -22,6 +25,7 @@ GAME_ENTITIES = {
 }
 
 GAME_PROFILES = {
+    "小游戏赛道": "小游戏赛道主要依托微信、抖音等平台分发，产品迭代快，商业模式覆盖IAA广告变现、IAP内购和混合变现，重点观察买量成本、素材效率、留存、付费率及平台流量政策。",
     "中国手游出海": "中国手游出海覆盖SLG、合成经营、动作、塔防和休闲等品类，主要观察海外收入、下载、区域市场结构及长线内容运营表现。",
     "腾讯游戏": "腾讯游戏覆盖MOBA、射击、动作和长线运营手游，微信、QQ及应用宝等渠道使其产品变动具有较广用户和渠道影响。",
     "网易游戏": "网易游戏覆盖MMO、竞技、派对和长线运营产品，产品同时面向国内市场与海外发行，重大调整通常涉及较大规模的研发和运营资源。",
@@ -36,6 +40,21 @@ GAME_PROFILES = {
 }
 
 MAJOR_EVENT_TERMS = {
+    "爆款小游戏": 28,
+    "买量小游戏": 26,
+    "变现小游戏": 26,
+    "爆款": 24,
+    "买量": 22,
+    "投放": 18,
+    "变现": 22,
+    "广告变现": 24,
+    "混合变现": 24,
+    "IAA": 22,
+    "IAP": 20,
+    "ROI": 20,
+    "登顶": 22,
+    "日活": 18,
+    "留存": 16,
     "停服": 30,
     "停止运营": 30,
     "关停": 28,
@@ -56,11 +75,23 @@ MAJOR_EVENT_TERMS = {
     "用户规模": 16,
 }
 
-SCOPE_TERMS = ("全球", "全国", "全平台", "破亿", "亿元", "千万用户", "百万用户", "同时在线")
-GAME_CONTEXT = ("国产游戏", "网络游戏", "手游", "端游", "游戏产品", "游戏公司", "游戏业务", "玩家")
+SCOPE_TERMS = (
+    "全球", "全国", "全平台", "破亿", "亿元", "千万用户", "百万用户", "同时在线",
+    "畅销榜", "下载榜", "投放榜", "月流水", "日流水",
+)
+GAME_CONTEXT = (
+    "国产游戏", "网络游戏", "手游", "端游", "小游戏", "游戏产品", "游戏公司", "游戏业务", "玩家",
+)
 DIGEST_TITLE_TERMS = ("榜单", "排行榜", "收入榜", "畅销榜", "Top", "TOP", "盘点", "周报", "月报", "观察")
-MARKET_REPORT_TITLE_TERMS = ("出海收入榜", "手游收入榜", "出海下载榜", "海外收入榜")
-MARKET_DATA_AGENCIES = ("Sensor Tower", "点点数据", "七麦数据", "data.ai")
+MARKET_REPORT_TITLE_TERMS = (
+    "出海收入榜", "手游收入榜", "出海下载榜", "海外收入榜", "小游戏畅销榜", "小游戏买量榜", "小游戏投放榜",
+)
+MARKET_DATA_AGENCIES = (
+    "Sensor Tower", "点点数据", "七麦数据", "data.ai", "DataEye", "AppGrowing", "广大大", "热云数据", "蝉大师",
+)
+MINIGAME_COMMERCIAL_TERMS = (
+    "流水", "买量", "投放", "变现", "广告变现", "混合变现", "IAA", "IAP", "ROI", "日活", "留存",
+)
 
 
 def _entity(text: str) -> str | None:
@@ -113,7 +144,14 @@ def assess_game_fallback(
         and any(agency.lower() in text.lower() for agency in MARKET_DATA_AGENCIES)
         and "手游" in text
     )
-    if any(term in item.title for term in DIGEST_TITLE_TERMS) and not is_market_report:
+    is_minigame_performance_report = (
+        "小游戏" in item.title
+        and any(term in item.title for term in DIGEST_TITLE_TERMS)
+        and sum(term in text for term in MINIGAME_COMMERCIAL_TERMS) >= 2
+    )
+    if any(term in item.title for term in DIGEST_TITLE_TERMS) and not (
+        is_market_report or is_minigame_performance_report
+    ):
         return None
     entity = "中国手游出海" if is_market_report else _entity(item.title)
     event_matches = ["市场榜单"] if is_market_report else [term for term in MAJOR_EVENT_TERMS if term in text]
@@ -132,6 +170,12 @@ def assess_game_fallback(
     freshness_score = 8 if age_hours <= 6 else 6 if age_hours <= 24 else 4 if age_hours <= 72 else 0
     score = min(100, 35 + event_score + scope_score + source_score + freshness_score)
     category = "市场数据" if is_market_report else "产品运营" if not event_matches else (
+        "商业化运营"
+        if any(term in event_matches for term in (
+            "爆款小游戏", "买量小游戏", "变现小游戏", "爆款", "买量", "投放", "变现",
+            "广告变现", "混合变现", "IAA", "IAP", "ROI", "登顶", "日活", "留存",
+        ))
+        else
         "产品运营"
         if any(term in event_matches for term in ("停服", "停止运营", "关停", "下架", "公测", "正式上线", "流水", "用户规模"))
         else "资本组织"
@@ -145,6 +189,7 @@ def assess_game_fallback(
 def _event_summary(item: NewsItem, assessment: Assessment) -> str:
     markers = [term for term in assessment.matched_terms if term in MAJOR_EVENT_TERMS]
     entity = next((term for term in assessment.matched_terms if term in GAME_PROFILES), "相关游戏业务")
+    display_entity = "小游戏" if entity == "小游戏赛道" else entity
     if assessment.category == "市场数据":
         return _trim(item.summary or item.title.rstrip("。！？；") + "。", 220)
     title_key = re.sub(r"\W", "", item.title.lower())
@@ -163,13 +208,14 @@ def _event_summary(item: NewsItem, assessment: Assessment) -> str:
     selected = [sentence for sentence in ranked if entity in sentence or any(marker in sentence for marker in markers)]
     if selected:
         return _trim("".join(selected[:2]), 220)
-    objective_title = neutralize_headline(item.title, entity)
+    objective_title = neutralize_headline(item.title, display_entity)
     return _trim(f"报道显示，{objective_title.rstrip('。！？；')}。具体范围和执行安排以正式信息为准。", 220)
 
 
 def format_game_fallback(item: NewsItem, assessment: Assessment, security_keyword: str) -> tuple[str, str]:
     entity = next(term for term in assessment.matched_terms if term in GAME_PROFILES)
-    title = _trim(neutralize_headline(item.title, entity), 70)
+    display_entity = "小游戏" if entity == "小游戏赛道" else entity
+    title = _trim(neutralize_headline(item.title, display_entity), 70)
     impact = {
         "产品运营": [
             "头部产品的上线、下架或运营调整会直接影响大规模用户迁移、渠道资源和同品类竞争节奏。",
@@ -186,6 +232,10 @@ def format_game_fallback(item: NewsItem, assessment: Assessment, security_keywor
         "市场数据": [
             "出海收入与下载榜可以反映区域上线、版本活动和买量节奏的阶段性效果，但不能替代完整流水和利润数据。",
             "应结合收入来源地区、产品生命周期和统计口径判断增长质量，避免只依据单月排名得出长期结论。",
+        ],
+        "商业化运营": [
+            "爆款表现需拆分自然量与付费量，并结合素材消耗、获客成本、次留与七留判断增长是否可持续。",
+            "变现质量应同时观察IAA展示效率、IAP付费率、平台分成和投放回收周期，避免只依据流水或榜单判断产品质量。",
         ],
     }[assessment.category]
     impacts = "\n".join(f"- {point}" for point in impact)

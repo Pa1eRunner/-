@@ -82,7 +82,7 @@ powershell -ExecutionPolicy Bypass -File scripts/uninstall_windows_task.ps1
 - `companies`：补充重点企业、产品和竞品名称。
 - `company_profiles`：维护重点公司的核心产品、业务模式和行业位置。
 - `safety`：维护政治敏感词、敏感人名、保护主体、未核实消息和指控性关键词；命中后仅落库记录，不向群聊推送。
-- `fallback`：控制国产网游与国内 AI/科技重大新闻补位池；两类新闻各有单轮 1 条名额，仅在棋牌推送不足时启用，默认最低 70 分。
+- `fallback`：控制国产网游与国内 AI/科技重大新闻补位池；两类新闻各有单轮 1 条名额，仅在棋牌推送不足时启用，默认最低 70 分。国产游戏池重点跟踪爆款小游戏、买量投放、IAA/IAP/混合变现、流水、留存与 ROI 变化。
 - `daily_backup`：前一自然日零推送时，在次日 09:30 后从近 72 小时安全、可信、中文的备选内容中按分数固定发送 3 条；不足时每轮继续补选，直至当日补满。
 - `instant_push_score`：即时推送阈值，默认 70 分。
 - `maximum_item_age_hours`：拒绝旧闻的时间窗口，默认 72 小时。
