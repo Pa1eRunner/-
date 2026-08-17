@@ -10,6 +10,7 @@ import requests
 
 from .models import Assessment, NewsItem
 from .timeliness import infer_core_event_at
+from .webtext import decoded_response_text
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136 Safari/537.36"
 HAN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
@@ -88,6 +89,7 @@ def _parse_datetime(value: str) -> datetime | None:
 def _original_published_at(page: str, url: str, parser: _ArticleTextParser) -> datetime | None:
     values = list(parser.published_values)
     values.extend(re.findall(r'"datePublished"\s*:\s*"([^"]+)"', page, re.IGNORECASE))
+    values.extend(re.findall(r"published at\s+([0-9:\-\s]+)", page, re.IGNORECASE))
     for value in values:
         parsed = _parse_datetime(value)
         if parsed:
@@ -116,12 +118,13 @@ def enrich_summary_from_original(
         session.trust_env = False
         response = session.get(item.url, timeout=timeout_seconds, headers={"User-Agent": USER_AGENT})
         response.raise_for_status()
+        page = decoded_response_text(response)
         parser = _ArticleTextParser()
-        parser.feed(response.text)
+        parser.feed(page)
     except Exception:
         return
 
-    published_at = _original_published_at(response.text, getattr(response, "url", item.url), parser)
+    published_at = _original_published_at(page, getattr(response, "url", item.url), parser)
     if published_at:
         item.published_at = published_at
     item.core_event_at = infer_core_event_at(" ".join(parser.parts), item, assessment)

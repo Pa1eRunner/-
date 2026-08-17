@@ -7,6 +7,8 @@ from html.parser import HTMLParser
 
 import requests
 
+from .webtext import decoded_response_text
+
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136 Safari/537.36"
 HAN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
 KANA_RE = re.compile(r"[\u3040-\u30ff]")
@@ -74,6 +76,6 @@ def verify_original_chinese(url: str, timeout_seconds: float) -> LanguageResult:
         content_type = response.headers.get("Content-Type", "").lower()
         if content_type and "html" not in content_type and "text" not in content_type:
             return LanguageResult(False, "原文不是可核验的中文网页")
-        return detect_chinese_html(response.text)
+        return detect_chinese_html(decoded_response_text(response))
     except Exception as exc:
         return LanguageResult(False, f"原文语言核验失败：{type(exc).__name__}")
