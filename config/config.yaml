@@ -1,0 +1,218 @@
+bot:
+  webhook_env: DINGTALK_WEBHOOK
+  security_keyword: 信源
+  request_timeout_seconds: 15
+  minimum_send_interval_seconds: 1.2
+
+monitor:
+  poll_interval_seconds: 1800
+  maximum_item_age_hours: 72
+  maximum_core_event_age_hours: 72
+  instant_push_score: 30
+  maximum_alerts_per_cycle: 5
+  send_on_first_run: false
+  database_path: data/newsbot.sqlite3
+  log_path: data/newsbot.log
+
+fallback:
+  enabled: true
+  trigger_when_qipai_sent_below: 2
+  maximum_game_per_cycle: 1
+  maximum_tech_per_cycle: 1
+  minimum_score: 70
+
+daily_backup:
+  enabled: true
+  send_after: "09:30"
+  required_items: 3
+  minimum_score: 35
+
+safety:
+  political_keywords:
+    - 总书记
+    - 国家主席
+    - 国务院总理
+    - 中央政治局
+    - 中央委员会
+    - 党和国家领导人
+    - 意识形态
+    - 颠覆国家政权
+    - 颜色革命
+    - 台独
+    - 港独
+    - 藏独
+    - 疆独
+    - 民族矛盾
+    - 宗教极端
+  sensitive_people:
+    - 国家领导人
+    - 中央领导
+    - 省部级领导
+  protected_entities:
+    - 浙江畅唐网络股份有限公司
+    - 浙江畅唐
+    - 畅唐网络
+    - 同元智算
+    - 同元创智
+    - 杭州同元创智
+    - 同城游
+  unverified_claim_markers:
+    - 网传
+    - 据传
+    - 传闻
+    - 爆料
+    - 被曝
+    - 被指
+    - 知情人士
+    - 消息人士
+    - 小道消息
+    - 未经证实
+    - 自媒体称
+    - 聊天记录显示
+  allegation_keywords:
+    - 涉嫌
+    - 诈骗
+    - 赌博
+    - 涉赌
+    - 洗钱
+    - 行贿
+    - 受贿
+    - 腐败
+    - 非法集资
+    - 偷税
+    - 漏税
+    - 侵权
+    - 抄袭
+    - 数据造假
+    - 财务造假
+    - 利益输送
+    - 黑幕
+    - 跑路
+    - 崩盘
+    - 违法
+    - 犯罪
+
+feeds:
+  - name: 新华社财经
+    url: https://www.news.cn/fortune/news_fortune.xml
+  - name: 中国新闻网财经
+    url: https://www.chinanews.com.cn/rss/finance.xml
+  - name: 新浪财经要闻
+    url: https://rss.sina.com.cn/roll/finance/hot_roll.xml
+  - name: 游戏陀螺
+    url: https://www.youxituoluo.com/feed
+  - name: 游戏茶馆
+    url: https://www.youxichaguan.com/feed
+  - name: 钛媒体
+    url: https://www.tmtpost.com/rss.xml
+
+searches:
+  - name: 搜狗微信-棋牌赛事
+    provider: sogou_weixin
+    query: 麻将 掼蛋 棋牌游戏 赛事
+  - name: 360资讯-棋牌赛事
+    provider: so360
+    query: 麻将 掼蛋 棋牌赛事
+  - name: 头条搜索-棋牌赛事
+    provider: toutiao
+    query: 麻将 掼蛋 棋牌游戏 赛事
+  - name: 头条搜索-国产网游重大变动
+    provider: toutiao
+    query: 国产游戏 腾讯 网易 米哈游 停服 收购 上线
+  - name: 360资讯-国产网游重大变动
+    provider: so360
+    query: 国产网游 腾讯 网易 米哈游 停服 收购
+  - name: 头条搜索-国内AI重大事件
+    provider: toutiao
+    query: 国内大模型 百度 阿里 腾讯 字节 华为 发布 开源 芯片
+  - name: 360资讯-国内AI重大事件
+    provider: so360
+    query: 国内大模型 百度 阿里 腾讯 字节 华为 发布 开源 芯片
+  - name: 头条搜索-科技巨头重大变动
+    provider: toutiao
+    query: 科技公司 百度 阿里 腾讯 华为 小米 收购 裁员 监管
+  - name: 360资讯-科技巨头重大变动
+    provider: so360
+    query: 科技公司 百度 阿里 腾讯 华为 小米 收购 裁员 监管
+  - name: 头条搜索-国产芯片重大事件
+    provider: toutiao
+    query: 国产芯片 长鑫科技 长鑫存储 上市 量产 市值
+  - name: 360资讯-国产芯片重大事件
+    provider: so360
+    query: 国产芯片 长鑫科技 长鑫存储 上市 量产 市值
+  - name: 头条搜索-AI模型计费
+    provider: toutiao
+    query: DeepSeek 大模型 API 涨价 调价 价格调整
+  - name: 360资讯-AI模型计费
+    provider: so360
+    query: DeepSeek 大模型 API 涨价 调价 价格调整
+  - name: 搜狗微信-棋牌行业
+    provider: sogou_weixin
+    query: 棋牌游戏 行业
+  - name: 搜狗微信-地方棋牌
+    provider: sogou_weixin
+    query: 地方棋牌 麻将 斗地主
+  - name: 搜狗微信-小游戏商业化
+    provider: sogou_weixin
+    query: 爆款小游戏 买量小游戏 变现小游戏
+  - name: 360资讯-小游戏商业化
+    provider: so360
+    query: 微信小游戏 爆款 买量 投放 变现 流水
+  - name: 头条-小游戏商业化
+    provider: toutiao
+    query: 小游戏 爆款 买量 投放 变现 IAA
+  - name: 360资讯-棋牌监管
+    provider: so360
+    query: 棋牌游戏 监管
+  - name: 360资讯-棋牌执法
+    provider: so360
+    query: 棋牌游戏 涉赌
+  - name: 360资讯-棋牌公司
+    provider: so360
+    query: 棋牌游戏 收购 出售 停服
+  - name: 头条搜索-监管
+    provider: toutiao
+    query: 棋牌游戏 监管
+  - name: 头条搜索-涉赌执法
+    provider: toutiao
+    query: 棋牌游戏 涉赌
+  - name: 头条搜索-资本
+    provider: toutiao
+    query: 棋牌游戏 收购
+  - name: 头条搜索-产品变动
+    provider: toutiao
+    query: 棋牌游戏 停服 下架
+  - name: 头条搜索-闲徕互娱
+    provider: toutiao
+    query: 闲徕互娱 昆仑万维
+  - name: 头条搜索-头部公司
+    provider: toutiao
+    query: 途游 禅游 博雅互动 棋牌游戏
+
+companies:
+  - 腾讯棋牌
+  - JJ比赛
+  - 竞技世界
+  - 途游游戏
+  - 在线途游
+  - 闲徕互娱
+  - 闲来麻将
+  - 同城游
+  - 微乐
+  - 禅游科技
+  - 家乡互动
+  - 博雅互动
+  - 联众
+  - 边锋
+
+company_profiles:
+  闲徕互娱: >-
+    闲徕互娱聚焦地方特色休闲竞技产品，覆盖闲来麻将、熊猫四川麻将、闲来广东麻将等地方麻将，以及斗地主等玩法，主要面向三至六线城市用户。其业务特点是地方玩法适配、熟人组局和区域化运营。
+  闲来麻将: >-
+    闲来麻将是闲徕互娱地方棋牌产品体系的重要品牌，业务侧重地方麻将玩法、熟人组局与区域化运营，产品及用户承接能力比单一交易价格更能反映此次变动的行业影响。
+  竞技世界: >-
+    竞技世界以JJ比赛和JJ斗地主为核心，长期采用赛事化、竞技化运营，业务覆盖斗地主等全国性大众棋牌品类。
+  JJ比赛: >-
+    JJ比赛是竞技世界旗下棋牌竞技平台，核心品类包括斗地主等大众棋牌，差异化能力主要来自赛事体系、竞技用户和长期平台运营。
+  腾讯棋牌: >-
+    腾讯棋牌覆盖欢乐斗地主、欢乐麻将、天天象棋等大众品类，产品分布于原生应用和小游戏等载体，并结合微信与QQ社交关系链运营。
